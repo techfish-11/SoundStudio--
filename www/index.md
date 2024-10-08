@@ -13,7 +13,7 @@ hero:
     - theme: alt
       text: "Developer Docs"
       link: /api-examples
-  image: logo.png
+  image: /assets/logo.png
 
 features:
   - title: 複数の音楽カテゴリをサポート 🎵
