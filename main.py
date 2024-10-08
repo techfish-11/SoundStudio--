@@ -3,6 +3,7 @@ import pygame
 import os
 import threading
 import time
+import webbrowser  # 追加
 
 # Pygameを初期化
 pygame.mixer.init()
@@ -24,6 +25,7 @@ class SplashScreen(ctk.CTk):
 
         # スプラッシュ画面を3秒間表示
         self.after(3000, self.destroy)
+        
 
     def create_splash_widgets(self):
         splash_label = ctk.CTkLabel(
@@ -118,6 +120,10 @@ class SoundStudioApp(ctk.CTk):
         self.progress_bar.set(0)
         self.progress_bar.pack(pady=10)
 
+        # ウェブサイトへ飛ぶボタンを右下に配置
+        website_button = ctk.CTkButton(control_frame, text="ウェブサイトへ", font=("Helvetica", 12), command=self.open_website, fg_color="#B9DABA", width=100, height=30)
+        website_button.pack(side="bottom", anchor="se", padx=10, pady=10)  # 右下に配置
+
         # ログウィジェットの作成
         self.log_text = ctk.CTkTextbox(self, width=800, height=150)
         self.log_text.pack(pady=10, padx=20, fill="x")
@@ -137,6 +143,10 @@ class SoundStudioApp(ctk.CTk):
 
         developer_label = ctk.CTkLabel(footer_frame, text="Developed by TechFish", font=("Helvetica", 10), text_color="#333333")
         developer_label.pack(side="right", padx=20)
+
+    def open_website(self):
+        # ウェブサイトを開くための関数
+        webbrowser.open("https://sound-studio-dev.vercel.app/")
 
     def create_settings_tab(self):
         settings_frame = ctk.CTkFrame(self.settings_tab)  # ここはそのまま
@@ -192,17 +202,21 @@ class SoundStudioApp(ctk.CTk):
         self.log_text.see("end")
 
     def load_music_files(self):
-        root_dir = os.getcwd()
+        # プロジェクトのルートディレクトリを取得
+        music_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'musics')  # musicsフォルダのパス
         self.log("音楽ファイルを読み込み中...")
         try:
-            for item in os.listdir(root_dir):
-                item_path = os.path.join(root_dir, item)
-                if os.path.isdir(item_path):
-                    files = [f for f in os.listdir(item_path) if f.endswith('.mp3')]
-                    if files:
-                        self.music_files[item] = files
-                        self.create_bgm_tab(item, files)
-            self.log("音楽ファイルの読み込みが完了しました。")
+            if os.path.exists(music_dir) and os.path.isdir(music_dir):
+                for item in os.listdir(music_dir):
+                    item_path = os.path.join(music_dir, item)
+                    if os.path.isdir(item_path):
+                        files = [f for f in os.listdir(item_path) if f.endswith('.mp3')]
+                        if files:
+                            self.music_files[item] = files
+                            self.create_bgm_tab(item, files)
+                self.log("音楽ファイルの読み込みが完了しました。")
+            else:
+                self.log("musicsフォルダが存在しないか、ディレクトリではありません。")
         except Exception as e:
             self.log(f"音楽ファイルの読み込み中にエラーが発生しました: {str(e)}")
 
@@ -215,11 +229,18 @@ class SoundStudioApp(ctk.CTk):
             )
             button.grid(row=index, column=0, sticky="ew", padx=15, pady=8)
 
-    def play_selected_song(self, song, category):
-        song_path = os.path.join(os.getcwd(), category, song)
+
+    def play_selected_song(self, song: str, category: str) -> None:
+        # プロジェクトのルートディレクトリを含む完全なパスを作成
+        song_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'musics', category, song)
         self.current_song = song
         self.current_category = category
         try:
+            # 音楽ファイルの存在確認
+            if not os.path.exists(song_path):
+                self.log(f"ファイルが存在しません: {song_path}")
+                return
+            
             threading.Thread(target=self._play_song, args=(song_path,)).start()
             self.log(f"{song}を{category}から再生します。")
         except Exception as e:
@@ -264,12 +285,15 @@ class SoundStudioApp(ctk.CTk):
 
     def update_progress_bar(self):
         if self.is_playing and self.current_song:
-            current_time = pygame.mixer.music.get_pos() / 1000
+            current_time = pygame.mixer.music.get_pos() / 1000  # 再生中の曲の現在の再生時間（秒）
             try:
-                total_length = pygame.mixer.Sound(os.path.join(os.getcwd(), self.current_category, self.current_song)).get_length()
-                progress = current_time / total_length
-                self.progress_bar.set(progress)
-                self.after(500, self.update_progress_bar)
+                # 正しいパスを使用して音楽ファイルの全体の長さを取得
+                song_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'musics', self.current_category, self.current_song)
+                total_length = pygame.mixer.Sound(song_path).get_length()  # 曲の全体の長さを秒で取得
+                
+                progress = current_time / total_length  # 現在の再生時間を全体の長さで割ることで進捗を計算
+                self.progress_bar.set(progress)  # プログレスバーの値を設定
+                self.after(500, self.update_progress_bar)  # 500ms後に再度このメソッドを呼び出す
             except Exception as e:
                 self.log(f"進度バーの更新中にエラーが発生しました: {str(e)}")
 
