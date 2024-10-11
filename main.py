@@ -3,7 +3,7 @@ import pygame
 import os
 import threading
 import time
-import webbrowser  # 追加
+import webbrowser
 
 # Pygameを初期化
 pygame.mixer.init()
