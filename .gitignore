@@ -1,6 +1,8 @@
-musics/
 .venv/
 www/.vitepress/cache/
 www/node_modules/
 www/.vitepress/dist/
 template/
+/src/__pycache__/
+musics/*
+musics/
